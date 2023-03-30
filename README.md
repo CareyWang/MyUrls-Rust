@@ -1,6 +1,7 @@
 # MyUrls-Rust 
 
 Your own url shorter service.
+
 Power by: Rust, ChatGPT [GPT-4](https://chat.openai.com/chat?model=gpt-4)
 
 ## Usage
