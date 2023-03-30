@@ -2,8 +2,7 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'master'
+    branches: [ "master" ]
 
 env:
   CARGO_TERM_COLOR: always
