@@ -1,0 +1,19 @@
+version: "3"
+services:
+  myurls_app:
+    image: careywong/myurls-rust:latest
+    container_name: myurls_app
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_URL=redis://myurls_redis:6379/
+      - DOMAIN=http://localhost:8080
+    depends_on:
+      - myurls_redis
+  myurls_redis:
+    image: redis:6
+    container_name: myurls_redis
+    volumes:
+      - ./data/redis:/data
+    expose:
+      - "6379"      

@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y ca-certificates tzdata && rm -rf /var/l
 # 复制可执行文件到新的镜像
 COPY --from=build /app/target/release/myurls .
 
+# 设置环境变量
 ENV REDIS_URL=redis://127.0.0.1:6379
 ENV DEFAULT_TTL=15552000
 ENV DOMAIN=http://localhost:8080
