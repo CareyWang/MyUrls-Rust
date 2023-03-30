@@ -5,6 +5,8 @@ use redis::Commands;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
+use url::Url;
+
 
 #[derive(Deserialize)]
 struct UrlRequest {
@@ -24,7 +26,32 @@ struct UrlData {
     url: String,
 }
 
+// 默认服务域名
+const DEFAULT_DOMAIN: &str = "http://localhost:8080";
+// 默认 redis 地址
+const DEFAULT_REDIS_URL: &str = "redis://127.0.0.1:6379/";
+// 默认过期时间 180 天
+const DEFAULT_TTL: usize = 15552000;
+// 默认随机字符串长度
+const DEFAULT_CHAR_LEN: usize = 8;
+
+// 生成短链接
 async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
+    let mut resp = JsonResponse {
+        code: 0,
+        msg: "".to_string(),
+        data: None,
+    };
+    
+    // 校验 url 是否合法，不合法直接返回
+    let url = req.url.clone();
+    if Url::parse(&url).is_err() {
+        warn!("invalid url found: {}", url);
+        resp.code = 1;
+        resp.msg = format!("invalid url found: {}", url);
+        return HttpResponse::Ok().json(resp);
+    }
+    
     let client = get_redis_client();
     let mut conn = client.get_connection().unwrap();
 
@@ -32,16 +59,10 @@ async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
     let default_ttl = env::var("DEFAULT_TTL")
         .unwrap_or_else(|_| "15552000".to_string())
         .parse::<usize>()
-        .unwrap_or(15552000);
-
-    let mut resp = JsonResponse {
-        code: 0,
-        msg: "".to_string(),
-        data: None,
-    };
+        .unwrap_or(DEFAULT_TTL);
 
     let short_url_id = get_ramdon_string();
-    let domain = env::var("DOMAIN").unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let domain = env::var("DOMAIN").unwrap_or_else(|_| DEFAULT_DOMAIN.to_string());
 
     match conn.exists::<String, bool>(short_url_id.clone()) {
         Ok(false) => {
@@ -70,17 +91,19 @@ async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
     }
 }
 
+// 短链接重定向
 async fn redirect(short_url_id: web::Path<String>) -> impl Responder {
     let client = get_redis_client();
     let mut conn = client.get_connection().unwrap();
-    info!("try to get {}", short_url_id);
-
     match conn.get::<_, Option<String>>(short_url_id.clone()) {
         Ok(Some(url)) => {
-            info!("redirecting: {} [{}]", short_url_id, url);
-            HttpResponse::Found()
-                .append_header(("Location", url))
-                .finish()
+            if let Ok(parsed_url) = Url::parse(&url) {
+                info!("redirect: {} [{}]", short_url_id, url);
+                HttpResponse::Found().append_header(("Location", String::from(parsed_url))).finish()
+            } else {
+                warn!("invalid url found: {} [{}]", short_url_id, url);
+                HttpResponse::BadRequest().body(format!("invalid url found: {} [{}]", short_url_id, url))
+            }
         }
         _ => {
             warn!("not found: {}", short_url_id);
@@ -89,16 +112,18 @@ async fn redirect(short_url_id: web::Path<String>) -> impl Responder {
     }
 }
 
+// 获取 redis 客户端
 fn get_redis_client() -> redis::Client {
-    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| DEFAULT_REDIS_URL.to_string());
     redis::Client::open(redis_url).unwrap()
 }
 
+// 生成随机字符串
 fn get_ramdon_string() -> String {
     let rng = rand::thread_rng();
     let random_string: String = rng
         .sample_iter(&rand::distributions::Alphanumeric)
-        .take(7)
+        .take(DEFAULT_CHAR_LEN)
         .map(char::from)
         .collect();
     random_string
