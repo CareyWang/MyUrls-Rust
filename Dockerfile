@@ -1,7 +1,12 @@
 # stage 1
-FROM rust:1.68 AS build 
+FROM rust:1.68-alpine AS build 
 
 WORKDIR /app
+
+# 安装必要的构建工具和库文件
+RUN apk add --no-cache \
+    build-base \
+    libc-dev
 
 # 复制 Cargo.toml 和 Cargo.lock 到工作目录
 COPY Cargo.toml Cargo.lock ./
@@ -17,13 +22,10 @@ COPY src ./src
 RUN cargo build --release
 
 # stage 2
-FROM debian:11-slim as runtime 
+FROM alpine:3.17 as runtime 
 
 # 设置工作目录
 WORKDIR /app
-
-# 安装 SSL 证书和运行时依赖
-RUN apt-get update && apt-get install -y ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 
 # 复制可执行文件到新的镜像
 COPY --from=build /app/target/release/myurls .

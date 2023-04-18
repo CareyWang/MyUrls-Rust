@@ -7,7 +7,6 @@ use serde::Serialize;
 use std::env;
 use url::Url;
 
-
 #[derive(Deserialize)]
 struct UrlRequest {
     url: String,
@@ -42,7 +41,7 @@ async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
         msg: "".to_string(),
         data: None,
     };
-    
+
     // 校验 url 是否合法，不合法直接返回
     let url = req.url.clone();
     if Url::parse(&url).is_err() {
@@ -51,7 +50,7 @@ async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
         resp.msg = format!("invalid url found: {}", url);
         return HttpResponse::Ok().json(resp);
     }
-    
+
     let client = get_redis_client();
     let mut conn = client.get_connection().unwrap();
 
@@ -99,10 +98,13 @@ async fn redirect(short_url_id: web::Path<String>) -> impl Responder {
         Ok(Some(url)) => {
             if let Ok(parsed_url) = Url::parse(&url) {
                 info!("redirect: {} [{}]", short_url_id, url);
-                HttpResponse::Found().append_header(("Location", String::from(parsed_url))).finish()
+                HttpResponse::Found()
+                    .append_header(("Location", String::from(parsed_url)))
+                    .finish()
             } else {
                 warn!("invalid url found: {} [{}]", short_url_id, url);
-                HttpResponse::BadRequest().body(format!("invalid url found: {} [{}]", short_url_id, url))
+                HttpResponse::BadRequest()
+                    .body(format!("invalid url found: {} [{}]", short_url_id, url))
             }
         }
         _ => {
