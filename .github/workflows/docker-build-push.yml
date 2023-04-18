@@ -1,9 +1,9 @@
-name: Build and Push Docker Image
+name: Build and Push Multi-Arch Docker Image
 
 on:
   push:
     branches:
-      - master
+      - main  # 你的默认分支名，可能是 'master' 或 'main'
 
 jobs:
   build-and-push:
@@ -12,6 +12,9 @@ jobs:
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v1
@@ -23,8 +26,8 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: careywong/myurls-rust:latest
-
-    - name: Logout from Docker Hub
-      run: docker logout
+        cache-from: type=registry,ref=careywong/myurls-rust:cache
+        cache-to: type=registry,ref=careywong/myurls-rust:cache,mode=max
