@@ -3,11 +3,11 @@ name: Build and Push Multi-Arch Docker Image
 on:
   push:
     branches:
-      - master  # 你的默认分支名，可能是 'master' 或 'main'
+      - master
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
     - name: Check out repository
