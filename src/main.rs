@@ -26,9 +26,11 @@ struct UrlData {
 }
 
 // 默认服务域名
-const DEFAULT_DOMAIN: &str = "http://localhost:8080";
+const DEFAULT_DOMAIN: &str = "localhost:8080";
+// 默认协议
+const DEFAULT_HTTP_PROTOCOL: &str = "https";
 // 默认 redis 地址
-const DEFAULT_REDIS_URL: &str = "redis://127.0.0.1:6379/";
+const DEFAULT_REDIS_URL: &str = "redis://127.0.0.1:6379/0";
 // 默认过期时间 180 天
 const DEFAULT_TTL: usize = 15552000;
 // 默认随机字符串长度
@@ -69,8 +71,9 @@ async fn shorten_url(req: web::Json<UrlRequest>) -> impl Responder {
                 .unwrap();
             info!("generated: {}[{}]", short_url_id, req.url);
 
+            let http_protocol = env::var("HTTP_PROTOCOL").unwrap_or_else(|_| DEFAULT_HTTP_PROTOCOL.to_string());
             resp.data = Some(UrlData {
-                short_url: format!("{}/{}", domain, short_url_id),
+                short_url: format!("{}://{}/{}", http_protocol, domain, short_url_id),
                 url: req.url.clone(),
             });
             return HttpResponse::Ok().json(resp);
@@ -146,6 +149,10 @@ async fn main() -> std::io::Result<()> {
             info!("redis connect success");
         },
     );
+
+    // 打印 http server 启动信息
+    info!("http server will start on: 0.0.0.0:8080");
+
     HttpServer::new(|| {
         App::new()
             .service(web::resource("/shorten").route(web::post().to(shorten_url)))
