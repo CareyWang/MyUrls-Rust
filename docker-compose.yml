@@ -6,14 +6,15 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - REDIS_URL=redis://myurls_redis:6379/0
-      - DOMAIN=localhost:8080
+      REDIS_URL: redis://myurls_redis:6379/0
+      DOMAIN: localhost:8080
     depends_on:
       - myurls_rust_redis
+
   myurls_rust_redis:
     image: redis:7
     container_name: myurls_redis
     volumes:
       - ./data/redis:/data
     expose:
-      - "6379"      
+      - "6379"

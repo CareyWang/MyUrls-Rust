@@ -1,5 +1,5 @@
 # build stage
-FROM rust:1.68-alpine AS build 
+FROM rust:1.75-alpine AS build 
 WORKDIR /app
 
 # install build tools and dependencies
@@ -15,7 +15,7 @@ COPY src ./src
 RUN cargo build --release
 
 # runtime stage
-FROM alpine:3.17 as runtime 
+FROM alpine:3.19 as runtime 
 WORKDIR /app
 
 # copy the executable from the build stage
